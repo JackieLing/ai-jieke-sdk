@@ -1,0 +1,7 @@
+server:
+  port: 9090
+
+coze:
+  token: pat_JroqVu638bX1O2ElWlfFc772IEOM8RuHR0F1RwHfahVPyudj9wMS24cahQhOq9Cw
+  bot-id: 7482689320084734004
+  user-id: 123123
