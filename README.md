@@ -67,7 +67,7 @@
 
 在coze官网创建一个智能体，这里我准备用**新闻推送**这个案例做演示。创建一个新闻推送的demo智能体：
 
-![image-20250323161127767](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20250323161127767.png)
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/6c2f2b1fd4c146efbc16f74496eeb5af.png)
 
 创建智能体成功以后，在插件这个位置，添加一个头条新闻的插件：
 
