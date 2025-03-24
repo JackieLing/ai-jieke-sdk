@@ -6,7 +6,7 @@
 
     <groupId>io.github.jackieling</groupId>
     <artifactId>jieke-ai-sdk</artifactId>
-    <version>1.0</version>
+    <version>0.2</version>
     <name>jieke-ai-sdk</name>
     <description>jieke-ai-sdk-personal</description>
     <url>https://gitee.com/jackieling/ai-jieke-sdk</url>

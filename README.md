@@ -36,6 +36,10 @@
 
 ## 🗃 迭代情况
 
+- 0.2
+  - 修复bug，传参错误已修复
+  - 简化了调用流程，只需要提供`token`、`BotId`、`userID`即可
+
 - 0.0.1
   - 能够调用coze平台自定义的智能体
 
@@ -46,11 +50,11 @@
 首先引入这个开源工具的POM依赖
 
 ```xml
-<dependency>
-    <groupId>io.github.jackieling</groupId>
-    <artifactId>jieke-ai-sdk</artifactId>
-    <version>1.0</version>
-</dependency>
+ <dependency>
+     <groupId>io.github.jackieling</groupId>
+     <artifactId>jieke-ai-sdk</artifactId>
+     <version>0.2</version>
+ </dependency>
 ```
 
 ### 💻 获取Coze token
@@ -110,7 +114,7 @@
 
 如果你获取到了这两个重要信息，那接下来我们就开始用代码来实现了。
 
-#### 📈 初始化聊天
+#### 📈 初始化聊天+查看对话详情+获取消息列表
 
 我们在引入jieke-ai-sdk以后首先需要初始化聊天，可以直接用 `new JieKeAiClient.Builder`初始化。
 
@@ -118,8 +122,14 @@
 
 ```java
 JieKeAiClient chatClient = new JieKeAiClient.Builder(TOKEN)
-                .botId("7482689320084734004")
+                .botId("写你的botId")
                 .userId("123123")
+    			.additionalMessage(Message.builder()
+                        .contentType("text")
+                        .content("人工智能")
+                        .role("user")
+                        .type("question")
+                        .build())
                 .build();
 ```
 
@@ -137,38 +147,56 @@ import java.io.IOException;
  */
 
 public class Demo {
-    private static final String TOKEN ="你自己的coze token值";
+     private static final String TOKEN = "填你自己的token";
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         // 1. 初始化聊天
         JieKeAiClient chatClient = new JieKeAiClient.Builder(TOKEN)
-                .botId("你自己的coze botId值")
-                .userId("123123")//这个随便写
+                .botId("填你自己的botId")
+                .userId("123123")
+                .additionalMessage(Message.builder()
+                        .contentType("text")
+                        .content("人工智能")
+                        .role("user")
+                        .type("question")
+                        .build())
                 .build();
         String chatResponse = chatClient.initializeChat();
-        System.out.println("初始化聊天响应: " + chatResponse);
+        Gson gson = new Gson();
+        ChatResponse response = gson.fromJson(chatResponse, ChatResponse.class);
+
+        // 获取 id
+        String id = response.getData().getId();
+        String conversationId = response.getData().getConversation_id();
+        log.info("智能体SDK收到参数---->chatId:{}",id);
+        log.info("智能体SDK收到参数---->conversation_Id:{}",conversationId);
+
+        Thread.sleep(6000);
+
+        // 2. 查看对话详情
+        JieKeAiClient conversationClient = new JieKeAiClient.Builder(TOKEN)
+                .conversationId(conversationId)
+                .chatId(id)
+                .build();
+        String conversationResponse = conversationClient.retrieveChat();
+        System.out.println("对话详情响应: " + conversationResponse);
+
+//         3. 查看消息列表
+        String messageListResponse = conversationClient.getMessageList();
+        System.out.println("消息列表响应: " + messageListResponse);
     }
 }
 ```
 
 初始化聊天以后会得到如下结果：
 
-```json
-{
-    "data": {
-        "id": "7484917103724789798",
-        "conversation_id": "7484917103724773414",
-        "bot_id": "7482689320084734004",
-        "created_at": 1742718068,
-        "last_error": {
-            "code": 0,
-            "msg": ""
-        },
-        "status": "in_progress"
-    },
-    "code": 0,
-    "msg": ""
-}
+```xml
+Request Body: {"additional_messages":[{"role":"user","content_type":"text","type":"question","content":"人工智能"}],"user_id":"123123","bot_id":"7485191777520009228"}
+10:59:57.164 [main] INFO com.linghu.Demo - 智能体SDK收到参数---->chatId:7485205416863924234
+10:59:57.166 [main] INFO com.linghu.Demo - 智能体SDK收到参数---->conversation_Id:7485205416863907850
+对话详情响应: {"code":0,"data":{"bot_id":"7485191777520009228","conversation_id":"7485205416863907850","created_at":1742785197,"id":"7485205416863924234","status":"in_progress"},"detail":{"logid":"202503241100035C19ED03C3B7801A4CDF"},"msg":""}
+消息列表响应: {"code":0,"data":[{"bot_id":"7485191777520009228","chat_id":"7485205416863924234","content":"{\"name\":\"toutiaoxinwen-getToutiaoNews\",\"arguments\":{\"q\":\"人工智能最新新闻\"},\"plugin_id\":7362080779243094070,\"plugin_name\":\"toutiaoxinwen\",\"api_id\":7362080779243110454,\"api_name\":\"getToutiaoNews\",\"plugin_type\":1}","content_type":"text","conversation_id":"7485205416863907850","created_at":1742785199,"id":"7485205429807497243","role":"assistant","type":"function_call","updated_at":1742785199},{"bot_id":"7485191777520009228","chat_id":"7485205416863924234","content":"{\"news\":[{\"media_name\":\"全国党媒信息公共平台\",\"categories\":[\"science_all/other\",\"news_finance/other\",\"news_tech/artificial_intelligence\",\"news_tech\",\"news_finance\",\"science_all\"],\"title\":\"2024世界人工智能大会：从“+AI”到“AI+”，新技术重塑千行百业\",\"cover\":\"https://p6-img.searchpstatp.com/tos-cn-i-vvloioitz3/03151cb5cfb34300bdd4ab4894d7bd9c~tplv-vvloioitz3-6:190:124.jpeg\",\"time\":\"2024-07-06 10:37\",\"url\":\"https://api-m.hubpd.com/transfer?nextUrl=https%3A%2F%2Fwww.hubpd.com%2Fhubpd%2Frss%2Ftoutiao%2Findex.html\u0026contentId=8358680908402631382\",\"summary\":\"来源：【人民网】人民网上海7月5日电 （记者葛俊俊、董志雯、王文娟）7月4日，2024世界人工智能大会暨人工智能全球治理高级别会议在上海世博中心开幕。\"},{\"title\":\"芯片、算法、数据多管齐下 人工智能产业加速实现核心技术自主可控\",\"cover\":\"\",\"time\":\"2025-03-17 09:36\",\"url\":\"https://3w.huanqiu.com/a/2ac16b/4LtYFp07AsP?agt=143\",\"summary\":\"来源：证券日报 原标题：芯片、算法、数据多管齐下 人工智能产业加速实现核心技术自主可控科技创新的宏伟蓝图正加速绘就。2025年《政府工作报告》（以下简称《报告》）明确提出，推进高水平科技自立自强。\",\"media_name\":\"环球网\",\"categories\":[\"news_finance/other\",\"news_tech/artificial_intelligence\",\"news_tech\",\"news_finance\"]},{\"cover\":\"\",\"time\":\"2024-07-02 07:35\",\"url\":\"https://m.thepaper.cn/newsDetail_forward_27918678?from=toutiao\",\"summary\":\"2024世界人工智能大会暨人工智能全球治理高级别会议（简称“WAIC 2024”）即将于7月4日开幕，围绕核心技术、智能终端、应用赋能三大板块，大会将为观众带来众多首发新秀和打卡亮点。据主办方介绍，今年的大会展览持续扩容升级，展览面积超5.\",\"media_name\":\"澎湃新闻\",\"categories\":[\"news_finance/other\",\"news_tech/artificial_intelligence\",\"news_tech\",\"news_finance\"],\"title\":\"2024世界人工智能大会五大看点：25款人形机器人亮相，大模型继续“涌现”\"},{\"url\":\"http://m.ce.cn/ttt/202503/24/t20250324_39328206.shtml\",\"summary\":\"来源：经济日报近年来，人工智能赋能各行各业蓬勃发展，成为推动经济高质量增长的重要力量。从传统制造业到现代服务业，从能源领域到医疗健康，人工智能的应用场景不断拓展，为产业发展带来了前所未有的变革。助推传统产业升级在传统产业中，人工智能的应用推动了生产流程的智能化升级。\",\"media_name\":\"中国经济网\",\"categories\":[\"news_finance/other\",\"news_tech/artificial_intelligence\",\"news_tech\",\"news_finance\"],\"title\":\"“人工智能+”赋能千行百业\",\"cover\":\"\",\"time\":\"2025-03-24 06:49\"},{\"media_name\":\"澎湃新闻\",\"categories\":[\"news_finance/other\",\"news_tech/artificial_intelligence\",\"news_tech\",\"news_finance\"],\"title\":\"2024世界人工智能大会将于7月4日开幕，展品数量超1500项\",\"cover\":\"https://p6-img.searchpstatp.com/tos-cn-i-vvloioitz3/0aec21c057124ee2c5307572804070d7~tplv-vvloioitz3-6:190:124.jpeg\",\"time\":\"2024-06-20 10:43\",\"url\":\"https://m.thepaper.cn/newsDetail_forward_27795856?from=toutiao\",\"summary\":\"6月20日上午，上海市政府新闻办举行新闻发布会，介绍2024世界人工智能大会暨人工智能全球治理高级别会议筹备进展情况，并回答记者提问。新闻发布会现场。澎湃新闻记者 俞凯 摄澎湃新闻（thepaper.\"}]}","content_type":"text","conversation_id":"7485205416863907850","created_at":1742785200,"id":"7485205429807726619","role":"assistant","type":"tool_response","updated_at":1742785200}],"detail":{"logid":"2025032411000301921ACC8CFA3E3EE977"},"msg":""}
+
 ```
 
 我们需要的值是：
@@ -178,157 +206,7 @@ public class Demo {
 
 我们一定要保存好上面这两个值，其中status表示我们的智能体会话创建状态。
 
-#### 📈 查看对话详情
-
-我们在初始化聊天以后，拿到了id和conversation_id，现在要通过 `retrieveChat()`获取当前这个会话执行情况，那就需要 传入：
-
-```java
-JieKeAiClient conversationClient = new JieKeAiClient.Builder(TOKEN)
-                .conversationId("7482692532908965888")//上一个步骤获取到的conversation_id
-                .chatId("7482695826272272420")//其实就是上一个步骤获取到的id
-                .build();
-        String conversationResponse = conversationClient.retrieveChat();
-        System.out.println("对话详情响应: " + conversationResponse);
-```
-
-执行结果为：
-
-```java
-{
-    "code": 0,
-    "data": {
-        "bot_id": "7482689320084734004",
-        "completed_at": 1742200897,
-        "conversation_id": "7482692532908965888",
-        "created_at": 1742200887,
-        "id": "7482695826272272420",
-        "status": "completed",
-        "usage": {
-            "input_count": 2073,
-            "output_count": 210,
-            "token_count": 2283
-        }
-    },
-    "detail": {
-        "logid": "202503231640567EEE5B80AE340BE37C10"
-    },
-    "msg": ""
-}
-```
-
-通过这个会话响应结果的 `status`我们可以判断执行情况：complete，即便是执行成功完成的意思。
-
-#### 📈 获取消息列表
-
-当我们通过对话详情的status判断出会话处于complete状态，接下来就可以直接获取智能体回复的消息内容了。
-
-我们可以直接通过 `getMessageList()`获取智能体回复的消息内容
-
-```java
-String messageListResponse = conversationClient.getMessageList();
-System.out.println("消息列表响应: " + messageListResponse);
-```
-
-执行结果为：
-
-```json
-{
-    "code": 0,
-    "data": [
-        {
-            "bot_id": "7482689320084734004",
-            "chat_id": "7482695826272272420",
-            "content": "{\"name\":\"toutiaoxinwen-getToutiaoNews\",\"arguments\":{\"q\":\"八卦新闻\"},\"plugin_id\":7362080779243094070,\"plugin_name\":\"toutiaoxinwen\",\"api_id\":7362080779243110454,\"api_name\":\"getToutiaoNews\",\"plugin_type\":1}",
-            "content_type": "text",
-            "conversation_id": "7482692532908965888",
-            "created_at": 1742200889,
-            "id": "7482695835113799692",
-            "role": "assistant",
-            "type": "function_call",
-            "updated_at": 1742200889
-        },
-        {
-            "bot_id": "7482689320084734004",
-            "chat_id": "7482695826272272420",
-            "content": "{\"news\":[{\"title\":\"特大八卦新闻\",\"cover\":\"https://p6-img.searchpstatp.com/tos-cn-i-vvloioitz3/2403b55e9607fd75bc3a8653a3186f3f~tplv-vvloioitz3-6:190:124.jpeg\",\"time\":\"2024-12-26 19:40\",\"url\":\"https://toutiao.com/group/7452683749739610687/\",\"summary\":\"内娱这瓜是一个接一个！刘大锤曝光岳岳八天七夜会三女，可真是令人咋舌。这岳岳本就不温不火，这下算是“出名”了。先去女化妆师家工作一小时，又和白衣美女在街头拥吻，还深夜去女爱豆左卓家。他还解释这都是正常交往，网友哪能买账！上月就有女生爆料被他玩弄感情，睡完就消失。\",\"media_name\":\"人生感悟\",\"categories\":[\"news_entertainment/gossip/other\",\"news_entertainment/interpretedcontent\",\"news_entertainment/gossip\",\"news_entertainment\"]},{\"summary\":\"序最近娱乐圈风波不断，明星八卦层出不穷今天我们就一一拆解。剧组丑闻：男星私生活惹争议，行业再曝底线失守一位知名男星在剧组期间被爆出招妓丑闻，引发娱乐圈关于职业操守的讨论。网友扒出他近几年在荧幕上的状态也大不如前，浮肿的面容让人认不出当年的英俊形象。\",\"media_name\":\"乐天派风声\",\"categories\":[\"news_entertainment/gossip/other\",\"news_entertainment/gossip\",\"news_entertainment/interpretedcontent\",\"news_entertainment\"],\"title\":\"剧组丑闻、娜扎情感争议、顶流竞争：娱乐圈最新八卦热议\",\"cover\":\"https://p6-img.searchpstatp.com/tos-cn-i-vvloioitz3/7c8a189a84bc44816e417caf18d8c967~tplv-vvloioitz3-6:190:124.jpeg\",\"time\":\"2024-11-29 09:27\",\"url\":\"https://toutiao.com/group/7442179816234680866/\"},{\"time\":\"2025-02-18 09:16\",\"url\":\"https://toutiao.com/group/7472560783541404186/\",\"summary\":\"· 饺子导演被多个账号假冒并带货：随着《哪吒之魔童闹海》票房成绩出色，导演饺子备受关注，多个短视频平台出现仿冒他的账号吸粉带货。2月7日至今，抖音已累计回查处置400余个仿冒导演杨宇（饺子）的账号，目前对新增仿冒行为仍在持续回查及拦截中。\",\"media_name\":\"星闻娱乐\",\"categories\":[\"news_entertainment/other\",\"news_entertainment\"],\"title\":\"国内娱乐八卦新闻：\",\"cover\":\"https://p6-img.searchpstatp.com/tos-cn-i-vvloioitz3/06a7ab64ccf8ae4e226f4dda8cdf1fc1~tplv-vvloioitz3-6:190:124.jpeg\"},{\"title\":\"阿尔卡拉斯首秀后，遭八卦新闻缠身：将和拉杜卡努参加温网混双？\",\"cover\":\"https://p6-img.searchpstatp.com/tos-cn-i-vvloioitz3/6b623e122674bb90b7794292b3d3a4c8~tplv-vvloioitz3-6:190:124.jpeg\",\"time\":\"2024-06-19 13:27\",\"url\":\"https://toutiao.com/group/7382081678845444660/\",\"summary\":\"就在昨天，2024ATP女王杯男单第一轮中，卫冕冠军、头号种子阿尔卡拉斯克服次盘2:5落后并化解3个盘点，最终以6-1 7-5战胜塞伦多洛，晋级第二轮。尽管这是西班牙人本赛季首次出现在草地上，但他没有表现出任何不适应的迹象，他的状态进入的很快，并且一直保持着很专注的状态。\",\"media_name\":\"网球之家\",\"categories\":[\"news_sports/tennis\",\"news_sports/after_competition\",\"news_sports\"]},{\"cover\":\"https://p6-img.searchpstatp.com/tos-cn-i-vvloioitz3/2407880b699b4ff78ea2a62f1bf88091~tplv-vvloioitz3-6:190:124.jpeg\",\"time\":\"2024-05-24 12:34\",\"url\":\"https://cdsbrss.cdsb.com/toutiao_no_video.php?url=https%3A%2F%2Fstatic.cdsb.com%2Fmicropub%2FArticles%2F202405%2F3d3ac1a9ed6a464f40d02a4e329a0971.html\",\"summary\":\"据西班牙媒体报道，去年因伪造舒马赫采访引起争议的一家德国媒体，现已被判赔偿舒马赫家人20万欧元。德国丰克媒体集团旗下《时事》杂志在2023年4月在封面刊登舒马赫面带微笑的照片，并配以《迈克尔·舒马赫，首个专访!》的头条标题，但字体较小的副标题则注明:“听上去能以假乱真。”\",\"media_name\":\"红星新闻\",\"categories\":[\"news_world/other\",\"news_world\"],\"title\":\"德国八卦杂志发布“舒马赫专访”，现被判赔偿20万欧元\"}]}",
-            "content_type": "text",
-            "conversation_id": "7482692532908965888",
-            "created_at": 1742200890,
-            "id": "7482695840482476071",
-            "role": "assistant",
-            "type": "tool_response",
-            "updated_at": 1742200890
-        },
-        {
-            "bot_id": "7482689320084734004",
-            "chat_id": "7482695826272272420",
-            "content": "=====\n- 📰 新闻标题: 特大八卦新闻\n- 📝 内容简介: 内娱瓜不断！刘大锤曝光岳岳八天七夜会三女，先去女化妆师家，又和白衣美女街头拥吻，还深夜去女爱豆左卓家。他称是正常交往，网友不买账。上月就有女生爆料被其玩弄感情、睡完消失。\n- 🔗 新闻网址: https://toutiao.com/group/7452683749739610687/\n=====",
-            "content_type": "text",
-            "conversation_id": "7482692532908965888",
-            "created_at": 1742200889,
-            "id": "7482695835113783308",
-            "reasoning_content": "",
-            "role": "assistant",
-            "type": "answer",
-            "updated_at": 1742200894
-        },
-        {
-            "bot_id": "7482689320084734004",
-            "chat_id": "7482695826272272420",
-            "content": "{\"msg_type\":\"generate_answer_finish\",\"data\":\"{\\\"finish_reason\\\":0,\\\"FinData\\\":\\\"\\\"}\",\"from_module\":null,\"from_unit\":null}",
-            "content_type": "text",
-            "conversation_id": "7482692532908965888",
-            "created_at": 1742200897,
-            "id": "7482695873097449535",
-            "role": "assistant",
-            "type": "verbose",
-            "updated_at": 1742200897
-        },
-        {
-            "bot_id": "7482689320084734004",
-            "chat_id": "7482695826272272420",
-            "content": "新闻推送的频率和时间可以设置吗？",
-            "content_type": "text",
-            "conversation_id": "7482692532908965888",
-            "created_at": 1742200897,
-            "id": "7482695873097465919",
-            "role": "assistant",
-            "type": "follow_up",
-            "updated_at": 1742200897
-        },
-        {
-            "bot_id": "7482689320084734004",
-            "chat_id": "7482695826272272420",
-            "content": "如何筛选和整理新闻以满足用户的兴趣和需求？",
-            "content_type": "text",
-            "conversation_id": "7482692532908965888",
-            "created_at": 1742200897,
-            "id": "7482695873097482303",
-            "role": "assistant",
-            "type": "follow_up",
-            "updated_at": 1742200897
-        },
-        {
-            "bot_id": "7482689320084734004",
-            "chat_id": "7482695826272272420",
-            "content": "有没有其他类型的新闻，如科技、娱乐、体育等？",
-            "content_type": "text",
-            "conversation_id": "7482692532908965888",
-            "created_at": 1742200897,
-            "id": "7482695873097498687",
-            "role": "assistant",
-            "type": "follow_up",
-            "updated_at": 1742200897
-        }
-    ],
-    "detail": {
-        "logid": "20250323164056E0B7628A48B25E2D458C"
-    },
-    "msg": ""
-}
-```
-
-到这里你会发现你已经能通过我们的sdk工具完成coze api的调用，通过sdk实现调用自己定义的新闻推送智能体，完成新闻推送。你可以在自己的业务系统中取出上述json里的`content`值。
+> 你可以根据你的业务系统的需要，去获取响应的信息。
 
 上述sdk的使用相当于你在coze官方UI使用自己的智能体：
 
@@ -341,30 +219,58 @@ System.out.println("消息列表响应: " + messageListResponse);
 **注意你需要自己替换里面的参数配置。**
 
 ```java
+package com.linghu;
+
+import com.google.gson.Gson;
 import com.jieke.coze.client.JieKeAiClient;
+import com.jieke.coze.model.Message;
+import com.jieke.coze.model.response.ChatResponse;
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.IOException;
 
-public class CozeClientTest {
+/**
+ * @Author: linghu
+ * @CreateTime: 2025-03-24
+ * @Description: 测试用
+ */
+@Slf4j
+public class Demo {
     private static final String TOKEN = "你自己的token";
-    
-    public static void main(String[] args) throws IOException {
+
+    public static void main(String[] args) throws IOException, InterruptedException {
         // 1. 初始化聊天
         JieKeAiClient chatClient = new JieKeAiClient.Builder(TOKEN)
                 .botId("你自己的botId")
                 .userId("123123")
+                .additionalMessage(Message.builder()
+                        .contentType("text")
+                        .content("人工智能")//填写关键词
+                        .role("user")
+                        .type("question")
+                        .build())
                 .build();
         String chatResponse = chatClient.initializeChat();
-        System.out.println("初始化聊天响应: " + chatResponse);
+        Gson gson = new Gson();
+        ChatResponse response = gson.fromJson(chatResponse, ChatResponse.class);
+
+        // 获取 id
+        String id = response.getData().getId();
+        String conversationId = response.getData().getConversation_id();
+        log.info("智能体SDK收到参数---->chatId:{}",id);
+        log.info("智能体SDK收到参数---->conversation_Id:{}",conversationId);
+
+        Thread.sleep(6000);
 
         // 2. 查看对话详情
         JieKeAiClient conversationClient = new JieKeAiClient.Builder(TOKEN)
-                .conversationId("你自己的conversation_id")
-                .chatId("你自己的chatId")
+                .conversationId(conversationId)
+                .chatId(id)
                 .build();
         String conversationResponse = conversationClient.retrieveChat();
         System.out.println("对话详情响应: " + conversationResponse);
 
-        // 3. 查看消息列表
+//         3. 查看消息列表
         String messageListResponse = conversationClient.getMessageList();
         System.out.println("消息列表响应: " + messageListResponse);
     }
