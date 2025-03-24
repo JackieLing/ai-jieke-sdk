@@ -2,11 +2,16 @@ package com.jieke.coze.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jieke.coze.exception.CozeException;
+import com.jieke.coze.model.Message;
 import okhttp3.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class JieKeAiClient {
     private static final String BASE_URL = "https://api.coze.cn/v3";
@@ -15,8 +20,12 @@ public class JieKeAiClient {
     private String chatId;
     private String botId;
     private String userId;
+    // 删除 query 字段
     private final OkHttpClient httpClient;
     private final ObjectMapper objectMapper;
+
+    // 在类的字段部分添加
+    private final List<Message> additionalMessages;
 
     private JieKeAiClient(Builder builder) {
         this.token = builder.token;
@@ -24,6 +33,7 @@ public class JieKeAiClient {
         this.chatId = builder.chatId;
         this.botId = builder.botId;
         this.userId = builder.userId;
+        this.additionalMessages = builder.additionalMessages;
         this.httpClient = new OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
@@ -38,23 +48,40 @@ public class JieKeAiClient {
             throw new CozeException("botId 和 userId 不能为空");
         }
 
-        // 创建JSON格式的请求体
-        String jsonBody = objectMapper.writeValueAsString(new HashMap<String, String>() {{
-            put("bot_id", botId);
-            put("user_id", userId);
-        }});
+        Map<String, Object> requestMap = new HashMap<>();
+        requestMap.put("bot_id", botId);
+        requestMap.put("user_id", userId);
+        if (additionalMessages != null && !additionalMessages.isEmpty()) {
+            List<Map<String, String>> messages = additionalMessages.stream()
+                    .map(msg -> {
+                        Map<String, String> messageMap = new HashMap<>();
+                        messageMap.put("content_type", msg.getContentType());
+                        messageMap.put("content", msg.getContent());
+                        messageMap.put("role", msg.getRole());
+                        messageMap.put("type", msg.getType());
+                        return messageMap;
+                    })
+                    .collect(Collectors.toList());
+            requestMap.put("additional_messages", messages);
+        }
 
-        RequestBody requestBody = RequestBody.create(
-            MediaType.parse("application/json; charset=utf-8"),
-            jsonBody
-        );
+        String jsonBody = objectMapper.writeValueAsString(requestMap);
+
+        // 修改请求头和请求体的设置方式
+        MediaType mediaType = MediaType.parse("application/json");
+        RequestBody requestBody = RequestBody.create(mediaType, jsonBody);
 
         Request request = new Request.Builder()
                 .url(BASE_URL + "/chat")
                 .addHeader("Authorization", "Bearer " + token)
-                .addHeader("Content-Type", "application/json")
+                .addHeader("Accept", "application/json")
                 .post(requestBody)
                 .build();
+
+        // 打印请求信息，方便调试
+        System.out.println("Request URL: " + request.url());
+        System.out.println("Request Headers: " + request.headers());
+        System.out.println("Request Body: " + jsonBody);
 
         return executeRequest(request);
     }
@@ -113,7 +140,8 @@ public class JieKeAiClient {
         private String chatId;
         private String botId;
         private String userId;
-
+        private final List<Message> additionalMessages = new ArrayList<>();  // 添加这行
+        
         public Builder(String token) {
             this.token = token;
         }
@@ -135,6 +163,13 @@ public class JieKeAiClient {
 
         public Builder userId(String userId) {
             this.userId = userId;
+            return this;
+        }
+
+        public Builder additionalMessage(Message message) {
+            if (message != null) {
+                this.additionalMessages.add(message);
+            }
             return this;
         }
 
