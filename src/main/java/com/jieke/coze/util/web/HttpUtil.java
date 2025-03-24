@@ -1,4 +1,4 @@
-package com.jieke.coze.util;
+package com.jieke.coze.util.web;
 
 import okhttp3.*;
 import java.io.IOException;
