@@ -61,7 +61,7 @@
  <dependency>
      <groupId>io.github.jackieling</groupId>
      <artifactId>jieke-ai-sdk</artifactId>
-     <version>0.2</version>
+     <version>0.3</version>
  </dependency>
 ```
 
