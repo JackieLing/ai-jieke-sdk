@@ -1,9 +1,6 @@
 package com.jieke.coze.util.video;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
 import com.jieke.coze.client.JieKeAiClient;
 import com.jieke.coze.model.Message;
 import com.jieke.coze.model.response.ChatResponse;
@@ -11,11 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 
-/**
- * @Author: linghu
- * @CreateTime: 2025-03-24
- * @Description: 视频相关agent工具类
- */
+
 @Slf4j
 public class ParseVideoMessagesUtils {
     /** 将视频内容文案提取出来 */
@@ -88,5 +81,15 @@ public class ParseVideoMessagesUtils {
         } while (!status.equals("completed"));
         log.info("智能体SDK轮询结束！爬虫任务失败！");
         return null;
+    }
+
+    public static void main(String[] args) throws IOException, InterruptedException {
+        JsonObject dd = ParseVideoMessagesUtils.getVideoToText(
+                "pat_xVhfRxF99B1XOzqC1PTd4oZerTCb8Dn0C5QcRIT6yll5E7H44Xr23xvJR5NGUilG",
+                "7485293156054024203",
+                "123123",
+                "https://v.douyin.com/FVeyy9kg5uA/"
+        );
+        System.out.println("dd"+dd);
     }
 }
